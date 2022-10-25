@@ -1,6 +1,6 @@
 import pygame as pg
-
-
+from random import randint
+import time
 
 #Vita linjer
 
@@ -18,27 +18,15 @@ xImg = pg.image.load('X.png').convert_alpha()
 oImg = pg.image.load('O.png').convert_alpha()
 winner = None
 turn = "X"
+botPlaying = False
 
 
 
-#drawGrid()
-#Vem vann funktion
-#Men istället för att turn ska bytas så ska datorn göra ett drag.
-#Slumpa fram ett nummer mellan 0 och 2, 2 gånger.
-def onePlayerGame():
-    drawGrid()
-    while True:
-        for event in pg.event.get():
-            if event.type == pg.QUIT:
-                pg.quit()
-            elif event.type == 1025 and winner == None:
-                pos = pg.mouse.get_pos()
-                print(pos)
-                updateBoard(pos)
+
 
 def mainMenu():
     drawMenu()
-    while True:   
+    while True:
         for ev in pg.event.get():      
             if ev.type == pg.QUIT:
                 pg.quit()
@@ -47,11 +35,13 @@ def mainMenu():
             if ev.type == pg.MOUSEBUTTONDOWN:
                 pos = pg.mouse.get_pos()
                 if 200 <= pos[0] <= 400 and 75 <= pos[1] <= 135:
-                    twoPlayerGame()
+                    mainGame()
                     
                 elif 200 <= pos[0] <= 400 and 175 <= pos[1] <= 235:
-                    print("hej")
-                    onePlayerGame()
+                    global botPlaying
+                    print("Bot playing")
+                    botPlaying = True
+                    mainGame()
                     
                 
 def drawMenu():
@@ -82,7 +72,7 @@ def drawMenu():
     screen.blit(text, textRect)
     pg.display.flip()
 
-def twoPlayerGame():
+def mainGame():
     #Variabler för rutan
     drawGrid()
     while True:
@@ -112,6 +102,9 @@ def drawGrid():
 #win boolean,
 def drawUpdates(pos):
     global turn
+    checkWin()
+    print(f'the winner is {winner}')
+    stopGame(checkDraw())
     if pos != None:
         if turn == "X":  
             screen.blit(xImg,pos)
@@ -121,21 +114,23 @@ def drawUpdates(pos):
             turn = "X"
         pg.display.flip()
         #Har någon vunnit?
-        checkWin()
-        print(winner)
 
-        if winner != None:
-            stopGame()
+        
     
     
     
 
-def stopGame():
+def stopGame(draw):
     green = (0, 255, 0)
     blue = (0, 0, 128)
     font = pg.font.Font('freesansbold.ttf', 32)
-    text = font.render(f'The winner is {winner}', True,green,blue)
-    screen.blit(text,(200,200))
+    print("Nu är jag i stopGame()")
+    if winner != None:
+        text = font.render(f'The winner is {winner}', True,green,blue)
+        screen.blit(text,(200,200))
+    if draw == True:
+        text = font.render(f'Draw', True,green,blue)
+        screen.blit(text,(200,200))
     pg.display.flip()
 
 def horizontalWin():
@@ -162,7 +157,25 @@ def verticalWin():
         winner = "O"
 
 
+# 0, 0 = 25,25
+# 0, 1, 25, 225
+# 0, 2, 25, 425
+# 1,0, 225, 25
+# 1,1, 225, 225
+# 1, 2, 225, 425
+def getPosFromIndex(index):
+    yIndex = 0
+    xIndex = 0
+    for row in board:
+        for square in row:
+            if index[0] == yIndex and index[1] == xIndex:
+                return (index[1]*200+25,index[0]*200+25)
+            xIndex += 1
+        yIndex += 1
+        xIndex = 0
 def diagonalWin():
+
+
     global winner
     diagonalList1 = []
     diagonalList2 = []
@@ -181,8 +194,45 @@ def checkWin():
     horizontalWin()
     diagonalWin()
     verticalWin()
+
+def checkDraw():
+    emptySquares = getEmptySquares()
+    print("Tomma rutor")
+    print(emptySquares)
+    if len(emptySquares) == 0:
+        return True
     
-         
+def getEmptySquares():
+    emptySquares = []
+    boardIndex = 0
+    rowIndex = 0
+    for row in board:
+        for square in row:
+            tmpList = []
+            if square == None:
+                tmpList = [boardIndex,rowIndex]
+                emptySquares.append(tmpList)
+            rowIndex += 1
+        boardIndex += 1
+        rowIndex = 0
+    return emptySquares
+
+def botTurn():
+    global turn
+    emptySquares = getEmptySquares()
+    countEmptySquares = len(emptySquares)-1
+    randomNum = randint(0,countEmptySquares)
+    index = emptySquares[randomNum]
+
+    board[index[0]][index[1]] = turn
+    print("Index:")
+    print(index)
+    pos = getPosFromIndex(index)
+    print("Postition:")
+    print(pos)
+    drawUpdates(pos)
+
+
 
 
 def getImgCoordinate(pos):
@@ -216,12 +266,19 @@ def getImgCoordinate(pos):
 #board[0][1] == (200,0), (400,0),(200,200),(0,200)
 #Tar in positionen där musen trycktes.
 def updateBoard(pos):
+    global botPlaying
     #Board variabeln
     #Vems tur
     #(Resetgame)
     #Skickas postionen som bilden ska sättas ut på.
     posForImage = getImgCoordinate(pos)
     drawUpdates(posForImage)
+    print("Board before bot")
+    print(board)
+    if botPlaying == True and posForImage != None and winner == None:
+        time.sleep(1)
+        print("Skickas till funktionen")
+        botTurn()
     print(board)
 
 
